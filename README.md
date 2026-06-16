@@ -23,3 +23,10 @@ print(df.head())
 
 # Problema de Classificação Desbalanceada
 print(df["Class"].value_counts(normalize=True))
+
+2. ⚙️ Engenharia de Variáveis e Padronização (Feature Engineering)
+Modelos lineares e redes neurais funcionam muito melhor quando os dados numéricos estão na mesma escala ou distribuídos de forma normal.
+
+Para que serve: O np.log1p aplica uma transformação logarítmica na coluna de valores (Amount) para reduzir o impacto de valores extremamente altos (outliers). O StandardScaler reescala os dados para que a média seja 0 e o desvio padrão seja 1.
+
+Por que foi utilizado: Evita que os valores das transações (que variam de centavam a milhares de reais) dominem os algoritmos e distorçam o aprendizado em relação às outras variáveis (que já vêm transformadas por PCA).
