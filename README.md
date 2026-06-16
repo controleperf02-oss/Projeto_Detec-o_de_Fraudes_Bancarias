@@ -7,9 +7,7 @@ Este projeto aborda um dos problemas mais desafiadores e importantes nas institu
 ## 🛠️ Arquitetura e Explicação Passo a Passo do Código
 O desenvolvimento do projeto foi dividido em etapas lógicas, cobrindo desde a importação de dados até a explicabilidade do modelo final.
 
-```markdown
+
 ## 🏁 Conclusão do Projeto
 
 Este pipeline demonstra a construção completa de um sistema antifraude. Saímos de uma análise inicial severamente prejudicada pelo desbalanceamento de dados e evoluímos para um modelo avançado (`XGBoost`), otimizado via `GridSearchCV` focado em **Recall**, estruturado de forma limpa através de **Pipelines** e totalmente auditável graças ao **SHAP**.
-
-```
