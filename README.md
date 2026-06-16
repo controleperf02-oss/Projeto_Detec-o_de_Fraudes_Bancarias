@@ -2,6 +2,8 @@
 
 Este projeto aborda um dos problemas mais desafiadores e importantes nas instituições financeiras: a detecção de fraudes em transações bancárias. O objetivo é construir um pipeline de Machine Learning capaz de identificar transações fraudulentas de alta precisão, lidando com o extremo desbalanceamento dos dados.
 
+🚀 **[Clique aqui para acessar e baixar o código Python completo](SCRIPTS/Detecçao_de_fraudes_bancarias.py)**
+
 ---
 
 ## 🛠️ Arquitetura e Explicação Passo a Passo do Código
