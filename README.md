@@ -12,3 +12,14 @@ O projeto inicia com o carregamento do dataset e a análise da distribuição da
 
 * **Para que serve:** Carrega a base de dados diretamente de um repositório na nuvem e exibe as 5 primeiras linhas para entender a estrutura.
 * **Por que foi utilizado:** Para diagnosticar o nível de desbalanceamento. Neste dataset, menos de 0.2% das transações são fraudes. Se ignorarmos isso, um modelo burro que diz que "toda transação é legítima" teria 99.8% de acurácia, mas não detectaria nenhuma fraude.
+
+```python
+import pandas as pd
+
+url = "[https://storage.googleapis.com/download.tensorflow.org/data/creditcard.csv](https://storage.googleapis.com/download.tensorflow.org/data/creditcard.csv)"
+df = pd.read_csv(url)
+
+print(df.head())
+
+# Problema de Classificação Desbalanceada
+print(df["Class"].value_counts(normalize=True))
