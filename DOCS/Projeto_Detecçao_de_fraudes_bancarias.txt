@@ -1,1 +1,373 @@
 
+Projeto: Detecção de Fraudes em Cartões de Crédito com Machine Learning
+
+Este projeto aborda um dos problemas mais desafiadores e importantes nas instituições financeiras: a detecção de fraudes em transações bancárias. O objetivo é construir um pipeline de Machine Learning capaz de identificar transações fraudulentas de alta precisão, lidando com o extremo desbalanceamento dos dados.
+
+🛠️ Arquitetura e Explicação Passo a Passo do Código
+O desenvolvimento do projeto foi dividido em etapas lógicas, cobrindo desde a importação de dados até a explicabilidade do modelo final.
+
+1. Carregamento e Análise Inicial dos Dados
+O projeto inicia com o carregamento do dataset e a análise da distribuição da variável alvo (Class), onde 0 representa transações legítimas e 1 representa fraudes.
+
+Para que serve: Carrega a base de dados diretamente de um repositório na nuvem e exibe as 5 primeiras linhas para entender a estrutura.
+
+Por que foi utilizado: Para diagnosticar o nível de desbalanceamento. Neste dataset, menos de 0.2% das transações são fraudes. Se ignorarmos isso, um modelo burro que diz que "toda transação é legítima" teria 99.8% de acurácia, mas não detectaria nenhuma fraude.
+
+import pandas as pd
+
+url = "https://storage.googleapis.com/download.tensorflow.org/data/creditcard.csv"
+df = pd.read_csv(url)
+
+print(df.head())
+
+# Problema de Classificação Desbalanceada
+print(df["Class"].value_counts(normalize=True))
+
+
+
+
+2. Engenharia de Variáveis e Padronização (Feature Engineering)
+Modelos lineares e redes neurais funcionam muito melhor quando os dados numéricos estão na mesma escala ou distribuídos de forma normal.
+
+Para que serve: O np.log1p aplica uma transformação logarítmica na coluna de valores (Amount) para reduzir o impacto de valores extremamente altos (outliers). O StandardScaler reescala os dados para que a média seja 0 e o desvio padrão seja 1.
+
+Por que foi utilizado: Evita que os valores das transações (que variam de centavos a milhares de reais) dominem os algoritmos e distorçam o aprendizado em relação às outras variáveis (que já vêm transformadas por PCA).
+
+import numpy as np
+
+df["Amount_log"] = np. log1p (df["Amount"])
+
+from sklearn.preprocessing import StandardScaler
+
+scaler = StandardScaler()
+
+df["Amount_scaled"] = scaler.fit_transform(df [["Amount"]])
+
+
+3. Divisão dos Dados em Treino e Teste
+Para garantir que o modelo realmente aprendeu a detectar padrões (em vez de apenas decorar as respostas), dividimos o banco de dados.
+
+Para que serve: Separa 70% dos dados para treinar o algoritmo e reserva 30% para testá-lo. O argumento stratify=y é o mais importante aqui: ele garante que a mesma proporção crítica de fraudes (0.2%) seja mantida perfeitamente tanto no treino quanto no teste.
+
+from sklearn.model_selection import train_test_split
+X = df.drop("Class", axis=1)
+y = df ["Class"]
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, stratify=y, test_size=0.3, random_state=42
+)
+
+4. Primeiro Modelo: Regressão Logística
+Um modelo estatístico clássico utilizado como nosso Baseline (ponto de partida).
+
+Para que serve: Treina o algoritmo básico de Regressão Logística usando os dados de treino e gera as primeiras previsões para os dados de teste.
+
+# Logistic Regression
+
+from sklearn.linear_model import LogisticRegression
+model = LogisticRegression(max_iter=5000)
+model.fit(X_train, y_train)
+y_pred = model.predict(X_test)
+
+
+5. Avaliação do Modelo (Métricas de Correção)
+Aqui entra o entendimento do negócio. Acurácia geral não serve para dados desbalanceados.
+
+Para que serve: Exibe um relatório com métricas cruciais:
+
+Precision (Precisão): Das transações que o modelo disse que eram fraude, quantas realmente eram? (Evita falsos alarmes e bloqueios indevidos de clientes).
+
+Recall (Sensibilidade): De todas as fraudes que aconteceram de verdade, quantas o modelo conseguiu capturar? (Evita prejuízo financeiro para o banco).
+
+from sklearn.metrics import classification_report, accuracy_score  #Está importando ferramentas prontas para medir e avaliar a qualidade das previsões da Inteligência Artificial
+
+# 1. Mostra a porcentagem geral de acertos do modelo
+print("\nAcurácia Geral do Modelo:")
+print(accuracy_score(y_test, y_pred))
+
+# 2. Mostra um relatório completo focado nas fraudes (Classe 1)
+print("\nRelatório de Classificação Detalhado:")
+print(classification_report(y_test, y_pred))
+
+
+6. Curvas de Análise de Performance (ROC e Precision-Recall)
+Gráficos que ajudam o analista a decidir a qualidade do modelo em diferentes cenários.
+
+Para que serve: A Curva ROC avalia o balanço entre falsos positivos e verdadeiros positivos. O AUC (Área sob a curva) resume isso em uma nota de 0 a 1. 
+
+
+# ROC Curve 
+from sklearn.metrics import roc_curve, roc_auc_score, precision_recall_curve
+import matplotlib.pyplot as plt
+
+y_probs = model.predict_proba(X_test)[:,1]
+
+fpr, tpr, _ = roc_curve(y_test, y_probs)
+
+plt.plot(fpr, tpr)
+plt.title("ROC Curve")
+plt.xlabel("False Positive Rate")
+plt.ylabel("True Positive Rate")
+plt.show()
+
+print("AUC:", roc_auc_score(y_test, y_probs))
+
+
+##################################
+
+A Curva Precision-Recall é ainda mais indicada para dados altamente desbalanceados, pois foca estritamente na performance da classe minoritária (as fraudes).
+
+# Precision-Recall Curve
+
+
+from sklearn.metrics import precision_recall_curve
+
+precision, recall, _ = precision_recall_curve(y_test, y_probs)
+
+plt.plot(recall, precision)
+plt.title("Precision-Recall Curve")
+plt.xlabel("Recall")
+plt.ylabel("Precision")
+plt.show()
+
+
+7. Balanceamento de Dados (Técnicas Avançadas)
+Para corrigir o fato de termos pouquíssimos exemplos de fraudes, o código testa duas estratégias:
+
+Para que serve: O Undersampling descarta dados legítimos para igualar o jogo. O SMOTE cria novos exemplos artificiais de fraudes usando inteligência geométrica.
+
+Por que foi utilizado: Dá ao modelo mais exemplos de fraudes para estudar, melhorando drasticamente a taxa de captura (Recall).
+
+# Undersampling (reduz a classe majoritaria)
+fraudes = df[df["Class"] == 1]
+normais = df[df["Class"] == 0].sample(len(fraudes), random_state=42)
+
+df_under = pd.concat([fraudes, normais])
+
+
+# Oversampling (aumenta a classe minoritaria)
+from imblearn.over_sampling import SMOTE
+
+smote = SMOTE()
+
+X_res, y_res = smote.fit_resample(X, y)
+
+
+
+8. Modelos de Conjunto (Random Forest e XGBoost)
+Passamos de modelos simples para algoritmos complexos baseados em árvores de decisão empilhadas.
+
+Para que serve: O RandomForest e o XGBoost criam centenas de árvores de decisão trabalhando juntas. Parâmetros como class_weight="balanced" e scale_pos_weight=10 dizem explicitamente ao algoritmo: "Preste 10 vezes mais atenção quando errar uma fraude do que quando errar uma transação normal".
+
+
+from sklearn.ensemble import RandomForestClassifier
+
+rf = RandomForestClassifier(
+n_estimators=50,
+max_depth=10,
+class_weight="balanced",
+n_jobs=-1,
+random_state=42
+)
+
+rf.fit(X_train, y_train)
+
+y_pred_rf = rf.predict(X_test)
+
+print(classification_report (y_test, y_pred_rf))
+
+#################################
+
+# Modelo Avançado - XGBoost
+
+from xgboost import XGBClassifier
+
+xgb = XGBClassifier(
+scale_pos_weight=10, # ajuda com desbalanceamento
+use_label_encoder=False,
+eval_metric="logloss"
+)
+
+xgb.fit(X_train, y_train)
+
+y_pred_xgb = xgb.predict(X_test)
+
+
+# Automatização com Pipelines e Ajuste de Threshold (Limiar de Decisão)
+
+from sklearn.pipeline import Pipeline
+
+pipeline = Pipeline([
+("scaler", StandardScaler()),
+("model", LogisticRegression (max_iter=1000))
+])
+
+pipeline.fit(X_train, y_train)
+
+y_pred = pipeline.predict(X_test)
+
+
+
+9. Automatização com Pipelines e Ajuste de Threshold (Limiar de Decisão)
+Organização do código e controle fino sobre a tomada de decisão do modelo.
+
+Pipeline: Garante que os dados de teste passem exatamente pelo mesmo pré-processamento (Scaler) que os dados de treino passaram, evitando vazamento de dados (data leakage).
+
+Threshold: Por padrão, o modelo assume que é fraude se a probabilidade for acima de 50% (0.5). Ao abaixar para 30% (0.3), tornamos o modelo mais "sensível" e agressivo para capturar fraudes, aceitando o risco de gerar um pouco mais de falsos positivos em nome da segurança financeira.
+
+# threshold
+
+threshold = 0.3
+
+y_pred_custom = (y_probs > threshold).astype(int)
+
+print(classification_report (y_test, y_pred_custom))
+
+10. Otimização de Hiperparâmetros (GridSearchCV)
+A busca automática pelas melhores configurações dos algoritmos.
+
+from sklearn.model_selection import GridSearchCV
+
+param_grid = {
+"max_depth": [3, 5],
+"n_estimators": [50, 100]
+}
+
+grid = GridSearchCV(
+XGBClassifier(eval_metric="logloss"),
+param_grid,
+scoring="recall",
+cv=3
+)
+
+grid.fit(X_train, y_train)
+
+print("Melhor modelo:", grid.best_params_)
+
+
+11. Importância de Variáveis e Explicabilidade (SHAP)
+Modelos complexos como o XGBoost funcionam como uma "caixa preta". Esta etapa abre essa caixa.
+
+Para que serve: O gráfico nativo do XGBoost mostra quais variáveis estatísticas foram mais utilizadas. Já a biblioteca SHAP aplica teoria dos jogos para mostrar exatamente quanto cada variável puxou o score para perto de ser uma "fraude" ou "legítima".
+
+Por que foi utilizado: Essencial em compliance bancário. Se um cliente ou auditor perguntar “Por que o modelo bloqueou essa transação?”, o SHAP fornece a justificativa exata de negócio.
+
+import matplotlib.pyplot as plt
+
+importancias = xgb.feature_importances_
+
+plt.bar(range(len(importancias)), importancias)
+plt.title("Importância das variáveis")
+plt.show()
+
+#######################################
+
+# Explicabilidade (SHAP)
+
+# SHAP mostra como cada variável influencia a decisão do modelo.
+
+import shap
+
+explainer = shap.Explainer(xgb)
+shap_values = explainer(X_test[:100])
+
+shap.plots.bar(shap_values)
+
+
+
+Conclusão do Projeto
+Este pipeline demonstra a construção completa de um sistema antifraude. Saímos de uma análise inicial severamente prejudicada pelo desbalanceamento de dados e evoluímos para um modelo avançado (XGBoost), otimizado via GridSearchCV focado em Recall, estruturado de forma limpa através de Pipelines e totalmente auditável graças ao SHAP.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
